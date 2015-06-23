@@ -1,6 +1,6 @@
 # utilities
 
-Just a collection of scripts I use daily
+Just a collection of scripts I use daily.
 
 ### record_triplej.sh
 Used to record Triple J on a schedule so I can listen to shows once I'm awake.
