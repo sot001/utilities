@@ -42,7 +42,8 @@ SUBTITLE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT subti
 DATE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT starttime FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 FILENAME=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT basename FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 STORAGEGROUP=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT storagegroup FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
-DIRNAME=$(find $(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT dirname FROM storagegroup WHERE groupname=\"$STORAGEGROUP\";"))
+FILEPATH=$(find $(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT dirname FROM storagegroup WHERE groupname=\"$STORAGEGROUP\";"))
+DIRNAME=$(dirname $FILEPATH)
 FILEPATH="$DIRNAME/$FILENAME"
 NEWNAME=$(echo ${CHANID}_${STARTTIME}).mkv
 NEWFILEPATH="$DIRNAME/$NEWNAME"
