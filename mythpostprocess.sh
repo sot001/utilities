@@ -42,8 +42,9 @@ SUBTITLE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT subti
 DATE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT starttime FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 FILENAME=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT basename FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 STORAGEGROUP=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT storagegroup FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
-FILEPATH=$(find $(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT dirname FROM storagegroup WHERE groupname=\"$STORAGEGROUP\";"))
-DIRNAME=$(dirname $FILEPATH)
+VIDEOFILE=$(find $(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT dirname FROM storagegroup WHERE groupname=\"$STORAGEGROUP\";") -name "$FILENAME")
+
+DIRNAME=$(dirname $VIDEOFILE)
 FILEPATH="$DIRNAME/$FILENAME"
 NEWNAME=$(echo ${CHANID}_${STARTTIME}).mkv
 NEWFILEPATH="$DIRNAME/$NEWNAME"
@@ -51,26 +52,20 @@ PRETTYNAME="$TITLE $SUBTITLE.mkv"
 PRETTYSUBDIR="$PRETTYDIRNAME$TITLE/"
 PRETTYFILEPATH="$PRETTYSUBDIR$PRETTYNAME"
 
-echo "FILEPATH=$DIRNAME$FILENAME /
-NEWNAME=${CHANID}_${STARTTIME}.mkv /
-NEWFILEPATH=$DIRNAME$NEWNAME /
-PRETTYNAME=$TITLE $SUBTITLE $DATE.mkv /
-PRETTYSUBDIR=$PRETTYDIRNAME$TITLE/ /
-PRETTYFILEPATH=$PRETTYSUBDIR$PRETTYNAME"
 
 # Flag commercials
-#mythcommflag --chanid "$CHANID" --starttime "$STARTTIME"
+mythcommflag --chanid "$CHANID" --starttime "$STARTTIME"
 # Generate a cut list
-#mythutil --gencutlist --chanid "$CHANID" --starttime "$STARTTIME"
+mythutil --gencutlist --chanid "$CHANID" --starttime "$STARTTIME"
 # Remove commercials from mpeg file
-#mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 --honorcutlist
+mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 --honorcutlist
 
 # To fix seeking, we'll prune the database values containing the previous bookmarks.
 mysql mythconverg --user=$DBUSER --password=$DBPASS -se "DELETE FROM recordedmarkup WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";"
 mysql mythconverg --user=$DBUSER --password=$DBPASS -se "DELETE FROM recordedseek WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";"
 
 # Convert cut video to H264, preserving audio (and subtitles where supported.)
-#ffmpeg -i "$FILEPATH".tmp -c:v libx264 -preset $PRESET -crf $CRF -c:a copy -c:s copy -threads $THREADS -f matroska "$NEWFILEPATH"
+ffmpeg -i "$FILEPATH".tmp -c:v libx264 -preset $PRESET -crf $CRF -c:a copy -c:s copy -threads $THREADS -f matroska "$NEWFILEPATH"
 
 # Rename intro shot to match our new file
 mv "$FILEPATH".png "$NEWFILEPATH".png
