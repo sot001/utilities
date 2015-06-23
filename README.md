@@ -13,9 +13,9 @@ Requires:
 
 Usage:
 ```
- record_triplej.sh [stream location] [duration in minutes]
+ record_triplej.sh [stream location] [duration in minutes] [file location]
 ```
 eg;
 ```
- record_triplej.sh http://shoutmedia.abc.net.au:10426/ 180  > /dev/null 2>&1
+ record_triplej.sh http://shoutmedia.abc.net.au:10426/ 180 /storage/music/triplej > /dev/null 2>&1
 ```

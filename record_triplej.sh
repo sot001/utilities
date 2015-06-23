@@ -3,7 +3,7 @@
 #
 STREAM=$1
 DURATION=`echo ${2}*60 | bc`
-LOCATION=/storage/music/triplej/
+LOCATION=$3
 FILE=triplej.mp3
 
 cd $LOCATION
