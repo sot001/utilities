@@ -11,10 +11,11 @@ Requires:
 * id3tool
 
 
-Usage: :x
-
- record_triplej.sh <stream location> <duration in minutes>
-
+Usage:
+```
+ record_triplej.sh [stream location] [duration in minutes]
+```
 eg;
+```
  record_triplej.sh http://shoutmedia.abc.net.au:10426/ 180  > /dev/null 2>&1
-
+```
