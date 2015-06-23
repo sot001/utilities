@@ -50,19 +50,26 @@ PRETTYNAME="$TITLE $SUBTITLE $DATE.mkv"
 PRETTYSUBDIR="$PRETTYDIRNAME$TITLE/"
 PRETTYFILEPATH="$PRETTYSUBDIR$PRETTYNAME"
 
+echo "FILEPATH=$DIRNAME$FILENAME /
+NEWNAME=${CHANID}_${STARTTIME}.mkv /
+NEWFILEPATH=$DIRNAME$NEWNAME /
+PRETTYNAME=$TITLE $SUBTITLE $DATE.mkv /
+PRETTYSUBDIR=$PRETTYDIRNAME$TITLE/ /
+PRETTYFILEPATH=$PRETTYSUBDIR$PRETTYNAME"
+
 # Flag commercials
-mythcommflag --chanid "$CHANID" --starttime "$STARTTIME"
+#mythcommflag --chanid "$CHANID" --starttime "$STARTTIME"
 # Generate a cut list
-mythutil --gencutlist --chanid "$CHANID" --starttime "$STARTTIME"
+#mythutil --gencutlist --chanid "$CHANID" --starttime "$STARTTIME"
 # Remove commercials from mpeg file
-mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 --honorcutlist
+#mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 --honorcutlist
 
 # To fix seeking, we'll prune the database values containing the previous bookmarks.
 mysql mythconverg --user=$DBUSER --password=$DBPASS -se "DELETE FROM recordedmarkup WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";"
 mysql mythconverg --user=$DBUSER --password=$DBPASS -se "DELETE FROM recordedseek WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";"
 
 # Convert cut video to H264, preserving audio (and subtitles where supported.)
-ffmpeg -i "$FILEPATH".tmp -c:v libx264 -preset $PRESET -crf $CRF -c:a copy -c:s copy -threads $THREADS -f matroska "$NEWFILEPATH"
+#ffmpeg -i "$FILEPATH".tmp -c:v libx264 -preset $PRESET -crf $CRF -c:a copy -c:s copy -threads $THREADS -f matroska "$NEWFILEPATH"
 
 # Rename intro shot to match our new file
 mv "$FILEPATH".png "$NEWFILEPATH".png
@@ -83,4 +90,5 @@ find -L $PRETTYDIRNAME -type l -delete
 find $PRETTYDIRNAME -type d -empty -delete
 
 # Notify Plex to refresh the library
+echo "curl "$PMSURL"library/sections/"$PMSSEC"/refresh"
 curl "$PMSURL"library/sections/"$PMSSEC"/refresh
