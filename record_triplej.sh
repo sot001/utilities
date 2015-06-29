@@ -35,7 +35,7 @@ FILE=triplej.mp3
 
 cd $dir
 # should have this as an argument too
-rm -f triplej.*
+rm -f *
 
 /usr/bin/streamripper $url -o always -A -l $time -a $FILE -d $dir -u "FreeAmp/2.x" --quiet --with-id3v1 
 
