@@ -1,4 +1,8 @@
 #!/bin/bash
+exec 3>&1 4>&2
+trap 'exec 2>&4 1>&3' 0 1 2 3
+exec 1>/tmp/mythpostprocess.out 2>&1
+
 # mythpostprocess.sh written by Justin Decker, copyright 2015. For licensing purposes, use GPLv2
 #
 # This script does four things:
@@ -20,11 +24,11 @@ PMSURL="http://192.168.10.242:32400/"
 # Set this to the section number of your recorded TV shows library. To find this out, go to your plex media server and navigate to the desired library. Look at the URL for that page, and at the end you should see /section/<number>. The number here is your section number.
 PMSSEC="2"
 # Number of threads to use for encoding. 0 uses all.
-THREADS=0
+THREADS=2
 # Set the libx264 CRF value. Higher value is lower video quality but smaller file size, min 0 max 51. In my experience, 30 is reasonable. See ffmpeg manual.
 CRF=30
 # libx264 preset. See ffmpeg manual for other options. I set this to ultrafast because it runs under one among many of my hypervisors on this machine, and I'm aiming to code 2 seconds of video per real-time second. You may prefer normal if you aren't doing this and/or have a faster CPU.
-PRESET="normal"
+PRESET="fast"
 # Set this to the location of the mythtv config.xml file. It's needed to determine the mysql login. If you're running mythbuntu, you shouldn't need to change this.
 CONFIGXML="/home/mythtv/.mythtv/config.xml"
 
@@ -40,6 +44,7 @@ CHANID=$1 && STARTTIME=$2
 TITLE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT title FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 SUBTITLE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT subtitle FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 DATE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT starttime FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
+AIRDATE=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT originalairdate FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 FILENAME=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT basename FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 STORAGEGROUP=$(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT storagegroup FROM recorded WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";")
 VIDEOFILE=$(find $(mysql mythconverg --user=$DBUSER --password=$DBPASS -se "SELECT dirname FROM storagegroup WHERE groupname=\"$STORAGEGROUP\";") -name "$FILENAME")
@@ -48,24 +53,28 @@ DIRNAME=$(dirname $VIDEOFILE)
 FILEPATH="$DIRNAME/$FILENAME"
 NEWNAME=$(echo ${CHANID}_${STARTTIME}).mkv
 NEWFILEPATH="$DIRNAME/$NEWNAME"
-PRETTYNAME="$TITLE $SUBTITLE.mkv"
+PRETTYNAME="$TITLE $SUBTITLE $AIRDATE.mkv"
 PRETTYSUBDIR="$PRETTYDIRNAME$TITLE/"
 PRETTYFILEPATH="$PRETTYSUBDIR$PRETTYNAME"
 
+# dump variables
+( set -o posix ; set )
 
 # Flag commercials
-mythcommflag --chanid "$CHANID" --starttime "$STARTTIME"
-# Generate a cut list
-mythutil --gencutlist --chanid "$CHANID" --starttime "$STARTTIME"
-# Remove commercials from mpeg file
-mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 --honorcutlist
-
+#mythcommflag --chanid "$CHANID" --starttime "$STARTTIME"
+## Generate a cut list
+#mythutil --gencutlist --chanid "$CHANID" --starttime "$STARTTIME"
+## Remove commercials from mpeg file
+##mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 --honorcutlist
+#mythtranscode --chanid "$CHANID" --starttime "$STARTTIME" --mpeg2 
+#
 # To fix seeking, we'll prune the database values containing the previous bookmarks.
 mysql mythconverg --user=$DBUSER --password=$DBPASS -se "DELETE FROM recordedmarkup WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";"
 mysql mythconverg --user=$DBUSER --password=$DBPASS -se "DELETE FROM recordedseek WHERE chanid=\"$CHANID\" AND starttime=\"$STARTTIME\";"
 
 # Convert cut video to H264, preserving audio (and subtitles where supported.)
-ffmpeg -i "$FILEPATH".tmp -c:v libx264 -preset $PRESET -crf $CRF -c:a copy -c:s copy -threads $THREADS -f matroska "$NEWFILEPATH"
+#ffmpeg -i "$FILEPATH".tmp -c:v libx264 -preset $PRESET -crf $CRF -c:a copy -c:s copy -threads $THREADS -f matroska "$NEWFILEPATH"
+ffmpeg -i "$FILEPATH" -c copy -c:v libx264 -preset $PRESET -crf $CRF -threads $THREADS -f matroska -sn "$NEWFILEPATH"
 
 # Rename intro shot to match our new file
 mv "$FILEPATH".png "$NEWFILEPATH".png
@@ -86,5 +95,4 @@ find -L $PRETTYDIRNAME -type l -delete
 find $PRETTYDIRNAME -type d -empty -delete
 
 # Notify Plex to refresh the library
-echo "curl "$PMSURL"library/sections/"$PMSSEC"/refresh"
 curl "$PMSURL"library/sections/"$PMSSEC"/refresh
